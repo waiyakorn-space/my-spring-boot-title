@@ -80,7 +80,7 @@ class MyServiceTest {
 
         when(myModelRepository.findById(id)).thenReturn(Optional.empty());
 
-        Assertions.assertThatThrownBy(() -> myService.getAllUserById(id))
+        Assertions.assertThatThrownBy(() -> myService.getUserById(id))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("User with id " + id + " not found");
 
@@ -95,7 +95,7 @@ class MyServiceTest {
 
         when(myModelRepository.findById(id)).thenReturn(Optional.of(mockModel));
 
-        MyModel result = myService.getAllUserById(id);
+        MyModel result = myService.getUserById(id);
         Assertions.assertThat(result).isEqualTo(mockModel);
 
         verify(myModelRepository, times(1)).findById(id);

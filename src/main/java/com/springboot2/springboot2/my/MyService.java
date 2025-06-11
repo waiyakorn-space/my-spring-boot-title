@@ -21,10 +21,11 @@ public class MyService {
                 .orElseThrow(() -> new EntityNotFoundException("User with email " + email + " not found"));
     }
 
-    public MyModel getAllUserById(Long id) throws EntityNotFoundException {
+    public MyModel getUserById(Long id) throws EntityNotFoundException {
         return myModelRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User with id " + id + " not found"));
     }
+
 
     public MyModel createUser(MyRequest req) {
         MyModel user = MyModel.builder()

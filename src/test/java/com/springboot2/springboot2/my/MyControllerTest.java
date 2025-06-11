@@ -70,6 +70,17 @@ class MyControllerTest {
                 .andExpect(content().string("User with id " + notFoundId + " not found"));
 
     }
+
+    @Test
+    void getUserById_FormHPathVariable_ShouldReturnMyModel() throws Exception {
+        mockMvc.perform(get("/users/" + firstUser.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.email").value("test@gmail.com"))
+                .andExpect(jsonPath("$.phone").value("11111"));
+    }
+
     @Test
     void getUserById_FormHeader_ShouldReturnMyModel() throws Exception {
         mockMvc.perform(get("/users/byId").header("id", firstUser.getId()))

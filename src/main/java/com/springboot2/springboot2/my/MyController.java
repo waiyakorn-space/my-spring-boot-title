@@ -20,6 +20,11 @@ public class MyController {
         return ResponseEntity.ok(allUsers);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<MyModel> getUserByParamEmail(@PathVariable(name = "id") long id) throws EntityNotFoundException {
+        return ResponseEntity.ok(myService.getUserById(id));
+    }
+
     @GetMapping("/byEmail")
     public ResponseEntity<MyModel> getUserByParamEmail(@RequestParam(name = "email") String email) throws EntityNotFoundException {
         return ResponseEntity.ok(myService.getUserByEmail(email));
@@ -27,14 +32,13 @@ public class MyController {
 
     @GetMapping("/byId")
     public ResponseEntity<MyModel> getUserByHeaderId(@RequestHeader(name = "id") Long id) throws EntityNotFoundException {
-        return ResponseEntity.ok(myService.getAllUserById(id));
+        return ResponseEntity.ok(myService.getUserById(id));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<String> handleEntityNotFound(EntityNotFoundException ex) {
         return ResponseEntity.status(500).body(ex.getMessage());
     }
-
 
     @PostMapping()
     public ResponseEntity<MyModel> createUser(@RequestBody MyRequest req){

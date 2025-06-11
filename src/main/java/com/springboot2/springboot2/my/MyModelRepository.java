@@ -9,5 +9,3 @@ import java.util.Optional;
 public interface MyModelRepository extends JpaRepository<MyModel,Long> {
     Optional<MyModel> findByEmail(String email);
 }
-
-
