@@ -1,153 +1,134 @@
 package com.springboot2.springboot2.my;
 
-import jakarta.persistence.EntityNotFoundException;
-import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-import java.util.Optional;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class MyControllerTest {
 
-    @InjectMocks
-    private MyService myService;
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
     private MyModelRepository myModelRepository;
 
-    // Get All Users
-    @Test
-    void test_getAllData_ShouldReturnEmptyList() {
-        when(myModelRepository.findAll())
-                .thenReturn(
-                        List.of()
-                );
-        List<MyModel> allData = myService.getAllUsers();
-        Assertions.assertThat(allData).isEmpty();
-        verify(myModelRepository, times(1)).findAll();
+    MyModel firstUser;
+
+    @BeforeEach
+    void setup() {
+        myModelRepository.deleteAll();
+        firstUser = myModelRepository.save(MyModel.builder().name("Test User").email("test@gmail.com").phone("11111").build());
+
     }
 
     @Test
-    void test_getAllData_ShouldReturnMyModelList() {
-        when(myModelRepository.findAll())
-                .thenReturn(
-                        List.of(new MyModel(), new MyModel())
-                );
-        List<MyModel> allData = myService.getAllUsers();
-        Assertions.assertThat(allData).hasSize(2);
-        verify(myModelRepository, times(1)).findAll();
+    void getAllUser_ShouldReturnListOfMyModels() throws Exception {
+        mockMvc.perform(get("/users"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].name").value("Test User"))
+                .andExpect(jsonPath("$[0].email").value("test@gmail.com"))
+                .andExpect(jsonPath("$[0].phone").value("11111"));
     }
 
-    // Get User By Email From Param Not found
     @Test
-    void test_getByEmail_ShouldReturnNotFound() {
-        String testEmail = "notfoundtest@gmial.com";
+    void getUserByEmail_ShouldReturnNoFound() throws Exception {
+        String notFoundEmail = "notfound@gmail.com";
 
-        when(myModelRepository.findByEmail(testEmail)).thenReturn(Optional.empty());
+        mockMvc.perform(get("/users/byEmail")
+                        .param("email", notFoundEmail))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("User with email " + notFoundEmail + " not found"));
 
-        Assertions.assertThatThrownBy(() -> myService.getUserByEmail(testEmail))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("User with email " + testEmail + " not found");
-
-        verify(myModelRepository, times(1)).findByEmail(testEmail);
     }
 
-    // Get User By Email From Param
     @Test
-    void test_getByEmail_ShouldReturnMyModel() {
-        String testEmail = "test@gmail.com";
-        MyModel mockModel = new MyModel(1L, "Test User", "test@gmail.com", "11111");
-
-        when(myModelRepository.findByEmail(testEmail)).thenReturn(Optional.of(mockModel));
-
-        MyModel result = myService.getUserByEmail(testEmail);
-
-        Assertions.assertThat(result).isEqualTo(mockModel);
-
-        verify(myModelRepository, times(1)).findByEmail(testEmail);
+    void getUserByEmail_ShouldReturnMyModel() throws Exception {
+        mockMvc.perform(get("/users/byEmail")
+                        .param("email", firstUser.getEmail()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.email").value("test@gmail.com"))
+                .andExpect(jsonPath("$.phone").value("11111"));
     }
 
-    // Get User By id From Header Not found
     @Test
-    void test_getById_ShouldReturnNotFound() {
-        long id = 1;
+    void getUserById_ShouldReturnNoFound() throws Exception {
+        long notFoundId = 999;
 
-        when(myModelRepository.findById(id)).thenReturn(Optional.empty());
+        mockMvc.perform(get("/users/byId").header("id",notFoundId))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("User with id " + notFoundId + " not found"));
 
-        Assertions.assertThatThrownBy(() -> myService.getAllUserById(id))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("User with id " + id + " not found");
-
-        verify(myModelRepository, times(1)).findById(id);
     }
-
-    // Get User By id From Header
     @Test
-    void test_getById_ShouldReturnMyModel() {
-        long id = 1;
-        MyModel mockModel = new MyModel(1L, "Test User", "test@gmail.com", "11111");
-
-        when(myModelRepository.findById(id)).thenReturn(Optional.of(mockModel));
-
-        MyModel result = myService.getAllUserById(id);
-        Assertions.assertThat(result).isEqualTo(mockModel);
-
-        verify(myModelRepository, times(1)).findById(id);
+    void getUserById_FormHeader_ShouldReturnMyModel() throws Exception {
+        mockMvc.perform(get("/users/byId").header("id", firstUser.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.email").value("test@gmail.com"))
+                .andExpect(jsonPath("$.phone").value("11111"));
     }
 
-    // Create User
     @Test
-    void test_createUser_ShouldReturnMyModel() {
-        MyRequest mockRequest = new MyRequest();
-        MyModel mockResponse = new MyModel();
-        mockResponse.setId(1L);
+    void createUser_ShouldCreateNewMyModel() throws Exception {
+        String mockRequest = """
+                {
+                    "name":"Test 2",
+                    "email":"new@gmail.com",
+                    "phone":"22222"
+                }
+                """;
 
-        when(myModelRepository.save(any(MyModel.class))).thenReturn(mockResponse);
-
-        MyModel result = myService.createUser(mockRequest);
-        Assertions.assertThat(result).isNotNull().isEqualTo(mockResponse);
-        Assertions.assertThat(result.getId()).isNotNull().isEqualTo(1L);
-
-        verify(myModelRepository, times(1)).save(any(MyModel.class));
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mockRequest))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Test 2"))
+                .andExpect(jsonPath("$.email").value("new@gmail.com"))
+                .andExpect(jsonPath("$.phone").value("22222"));
     }
 
-    //Update User
     @Test
-    void test_updateUser_ShouldReturnMyModel() {
-        long id = 1;
-        MyRequest mockRequest = new MyRequest( "Test Update", "test_update@gmail.com", "99999");
-        MyModel mockExistUser = new MyModel(1L, "Test User", "test@gmail.com", "11111");
-        MyModel mockUpdatedUser = new MyModel(1L, "Test Update", "test_update@gmail.com", "99999");
+    void updateUser_ShouldReturnUpdatedMyModel() throws Exception {
+        MyModel userForUpdate = myModelRepository.save(MyModel.builder().name("Test ToUpdate").email("toupdate@gmail.com").phone("33333").build());
+        String mockRequest = """
+                {
+                    "name":"Test Updated",
+                    "email":"updated@gmail.com",
+                    "phone":"55555"
+                }
+                """;
 
-        when(myModelRepository.findById(id)).thenReturn(Optional.of(mockExistUser));
-        when(myModelRepository.save(any(MyModel.class))).thenReturn(mockUpdatedUser);
-
-        MyModel result = myService.updateUser(id,mockRequest);
-
-        Assertions.assertThat(result).isNotNull().isEqualTo(mockUpdatedUser);
-        Assertions.assertThat(result.getId()).isNotNull().isEqualTo(1L);
-        Assertions.assertThat(result.getName()).isNotNull().isEqualTo("Test Update");
-
-        verify(myModelRepository,times(1)).findById(id);
-        verify(myModelRepository,times(1)).save(any(MyModel.class));
+        mockMvc.perform(put("/users/" + userForUpdate.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mockRequest))
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(userForUpdate.getId()))
+                .andExpect(jsonPath("$.name").value("Test Updated"))
+                .andExpect(jsonPath("$.email").value("updated@gmail.com"))
+                .andExpect(jsonPath("$.phone").value("55555"));
     }
 
-    //Delete User
     @Test
-    void test_deleteUser_ShouldReturnVoid() {
-        long id = 1;
+    void deleteUser_ShouldReturnSuccess() throws Exception {
+        MyModel userForDelete = myModelRepository.save(MyModel.builder().name("Test ToDelete").email("todelete@gmail.com").phone("44444").build());
 
-        doNothing().when(myModelRepository).deleteById(id);
-
-        myService.deleteUser(id);
-
-        verify(myModelRepository,times(1)).deleteById(id);
+        mockMvc.perform(delete("/users/" + userForDelete.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string("The user has been deleted successfully."));
     }
-
 }

@@ -27,13 +27,12 @@ public class MyController {
 
     @GetMapping("/byId")
     public ResponseEntity<MyModel> getUserByHeaderId(@RequestHeader(name = "id") Long id) throws EntityNotFoundException {
-        System.out.println("id: " + id);
         return ResponseEntity.ok(myService.getAllUserById(id));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<String> handleEntityNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(404).body(ex.getMessage());
+        return ResponseEntity.status(500).body(ex.getMessage());
     }
 
 
